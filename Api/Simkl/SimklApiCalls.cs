@@ -17,24 +17,15 @@ using Microsoft.Extensions.Logging;
 
 namespace jellyfin_ani_sync.Api.Simkl;
 
-public class SimklApiCalls {
-    private readonly IHttpClientFactory _httpClientFactory;
-    private readonly IServerApplicationHost _serverApplicationHost;
-    private readonly IHttpContextAccessor _httpContextAccessor;
+public class SimklApiCalls : AuthApiCall {
     private readonly Dictionary<string, string> _requestHeaders;
-    private readonly UserConfig _userConfig;
     private readonly ILogger<SimklApiCalls> _logger;
-    private readonly AuthApiCall _authApiCall;
     public static readonly string ApiBaseUrl = "https://api.simkl.com";
 
-    public SimklApiCalls(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory, IServerApplicationHost serverApplicationHost, IHttpContextAccessor httpContextAccessor, Dictionary<string, string>? requestHeaders, UserConfig? userConfig = null) {
-        _httpClientFactory = httpClientFactory;
-        _serverApplicationHost = serverApplicationHost;
-        _httpContextAccessor = httpContextAccessor;
+    public SimklApiCalls(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory, IServerApplicationHost serverApplicationHost, IHttpContextAccessor httpContextAccessor, Dictionary<string, string>? requestHeaders, UserConfig userConfig) : 
+        base(ApiName.Simkl, httpClientFactory, serverApplicationHost, httpContextAccessor, loggerFactory, userConfig) {
         _requestHeaders = requestHeaders;
-        _userConfig = userConfig;
         _logger = loggerFactory.CreateLogger<SimklApiCalls>();
-        _authApiCall = new AuthApiCall(ApiName.Simkl, httpClientFactory, serverApplicationHost, httpContextAccessor, loggerFactory, userConfig: userConfig);
     }
 
     /// <summary>
@@ -46,7 +37,7 @@ public class SimklApiCalls {
             Base = $"{ApiBaseUrl}/sync/activities"
         };
 
-        HttpResponseMessage? apiCall = await _authApiCall.AuthenticatedApiCall(ApiName.Simkl, AuthApiCall.CallType.GET, url.Build(), requestHeaders: _requestHeaders);
+        HttpResponseMessage? apiCall = await AuthenticatedApiCall(ApiName.Simkl, AuthApiCall.CallType.GET, url.Build(), requestHeaders: _requestHeaders);
         return apiCall is { IsSuccessStatusCode: true };
     }
 
@@ -69,7 +60,7 @@ public class SimklApiCalls {
         url.Parameters.Add(new KeyValuePair<string, string>("limit", pageLimit.ToString()));
         url.Parameters.Add(new KeyValuePair<string, string>("page", page.ToString()));
 
-        var apiCall = await _authApiCall.AuthenticatedApiCall(ApiName.Simkl, AuthApiCall.CallType.GET, url.Build(), requestHeaders: _requestHeaders);
+        var apiCall = await AuthenticatedApiCall(ApiName.Simkl, AuthApiCall.CallType.GET, url.Build(), requestHeaders: _requestHeaders);
         if (apiCall == null) {
             return null;
         }
@@ -97,7 +88,7 @@ public class SimklApiCalls {
                 }
             }
 
-            HttpResponseMessage? pageApiCall = await _authApiCall.AuthenticatedApiCall(ApiName.Simkl, AuthApiCall.CallType.GET, url.Build());
+            HttpResponseMessage? pageApiCall = await AuthenticatedApiCall(ApiName.Simkl, AuthApiCall.CallType.GET, url.Build());
             if (pageApiCall == null) break;
             List<SimklMedia>? nextPageResult;
             try {
@@ -136,7 +127,7 @@ public class SimklApiCalls {
             return null;
         }
 
-        HttpResponseMessage? apiCall = await _authApiCall.AuthenticatedApiCall(ApiName.Simkl, AuthApiCall.CallType.GET, url.Build(), requestHeaders: _requestHeaders);
+        HttpResponseMessage? apiCall = await AuthenticatedApiCall(ApiName.Simkl, AuthApiCall.CallType.GET, url.Build(), requestHeaders: _requestHeaders);
         if (apiCall == null) {
             return null;
         }
@@ -177,7 +168,7 @@ public class SimklApiCalls {
             url.Parameters.Add(new KeyValuePair<string, string>("mal", ids.MyAnimeList.Value.ToString()));
         }
 
-        HttpResponseMessage? apiCall = await _authApiCall.AuthenticatedApiCall(ApiName.Simkl, AuthApiCall.CallType.GET, url.Build(), requestHeaders: _requestHeaders);
+        HttpResponseMessage? apiCall = await AuthenticatedApiCall(ApiName.Simkl, AuthApiCall.CallType.GET, url.Build(), requestHeaders: _requestHeaders);
         if (apiCall == null) {
             return null;
         }
@@ -213,7 +204,7 @@ public class SimklApiCalls {
 
         url.Parameters.Add(new KeyValuePair<string, string>("extended", "full"));
 
-        HttpResponseMessage? apiCall = await _authApiCall.AuthenticatedApiCall(ApiName.Simkl, AuthApiCall.CallType.GET, url.Build(), requestHeaders: _requestHeaders);
+        HttpResponseMessage? apiCall = await AuthenticatedApiCall(ApiName.Simkl, AuthApiCall.CallType.GET, url.Build(), requestHeaders: _requestHeaders);
         if (apiCall == null) {
             return null;
         }
@@ -297,7 +288,7 @@ public class SimklApiCalls {
 
         var stringContent = new StringContent(JsonSerializer.Serialize(updateBody), Encoding.UTF8, "application/json");
 
-        HttpResponseMessage? response = await _authApiCall.AuthenticatedApiCall(ApiName.Simkl, AuthApiCall.CallType.POST, url.Build(), stringContent: stringContent, requestHeaders: _requestHeaders);
+        HttpResponseMessage? response = await AuthenticatedApiCall(ApiName.Simkl, AuthApiCall.CallType.POST, url.Build(), stringContent: stringContent, requestHeaders: _requestHeaders);
         if (response != null) {
             return response.IsSuccessStatusCode;
         }

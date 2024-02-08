@@ -7,7 +7,6 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
 using System.Threading.Tasks;
 using jellyfin_ani_sync.Configuration;
 using jellyfin_ani_sync.Helpers;
@@ -20,7 +19,7 @@ using Microsoft.Extensions.Logging;
 
 namespace jellyfin_ani_sync.Api.Shikimori;
 
-public class ShikimoriApiCalls {
+public class ShikimoriApiCalls : AuthApiCall {
     private readonly ILogger<ShikimoriApiCalls> _logger;
     private readonly AuthApiCall _authApiCall;
     private readonly string _refreshTokenUrl = "https://shikimori.one/oauth/token";
@@ -28,7 +27,8 @@ public class ShikimoriApiCalls {
     private readonly UserConfig? _userConfig;
     private readonly Dictionary<string, string>? _requestHeaders;
 
-    public ShikimoriApiCalls(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory, IServerApplicationHost serverApplicationHost, IHttpContextAccessor httpContextAccessor, Dictionary<string, string>? requestHeaders, UserConfig? userConfig = null) {
+    public ShikimoriApiCalls(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory, IServerApplicationHost serverApplicationHost, IHttpContextAccessor httpContextAccessor, Dictionary<string, string>? requestHeaders, UserConfig userConfig) : 
+        base(ApiName.Shikimori, httpClientFactory, serverApplicationHost, httpContextAccessor, loggerFactory, userConfig) {
         _userConfig = userConfig;
         _requestHeaders = requestHeaders;
         _logger = loggerFactory.CreateLogger<ShikimoriApiCalls>();

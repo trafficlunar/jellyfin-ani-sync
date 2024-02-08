@@ -15,23 +15,12 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
 namespace jellyfin_ani_sync.Api.Annict {
-    public class AnnictApiCalls {
-        private readonly IHttpClientFactory _httpClientFactory;
-        private readonly ILoggerFactory _loggerFactory;
-        private readonly IServerApplicationHost _serverApplicationHost;
-        private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly HttpClient _httpClient;
-        private readonly UserConfig _userConfig;
+    public class AnnictApiCalls : GraphQlApiCall {
         public static readonly int PageSize = 1000;
 
 
-        public AnnictApiCalls(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory, IServerApplicationHost serverApplicationHost, IHttpContextAccessor httpContextAccessor, UserConfig userConfig = null) {
-            _httpClientFactory = httpClientFactory;
-            _loggerFactory = loggerFactory;
-            _serverApplicationHost = serverApplicationHost;
-            _httpContextAccessor = httpContextAccessor;
-            _httpClient = httpClientFactory.CreateClient(NamedClient.Default);
-            _userConfig = userConfig;
+        public AnnictApiCalls(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory, IServerApplicationHost serverApplicationHost, IHttpContextAccessor httpContextAccessor, UserConfig userConfig) :
+            base(ApiName.Annict, httpClientFactory, serverApplicationHost, httpContextAccessor, loggerFactory, userConfig) {
         }
 
         /// <summary>
@@ -59,7 +48,7 @@ namespace jellyfin_ani_sync.Api.Annict {
 
             AnnictSearch.AnnictSearchMedia searchMedia = new AnnictSearch.AnnictSearchMedia();
 
-            var response = await GraphQlHelper.AuthenticatedRequest(_httpClientFactory, _loggerFactory, _serverApplicationHost, _httpContextAccessor, _userConfig, query, ApiName.Annict, variables);
+            var response = await AuthenticatedRequest(query, ApiName.Annict, variables);
             if (response != null) {
                 StreamReader streamReader = new StreamReader(await response.Content.ReadAsStreamAsync());
                 var result = JsonSerializer.Deserialize<AnnictSearch.AnnictSearchMedia>(await streamReader.ReadToEndAsync());
@@ -90,7 +79,7 @@ namespace jellyfin_ani_sync.Api.Annict {
                 { "state", status.ToString().ToUpper() },
             };
 
-            var response = await GraphQlHelper.AuthenticatedRequest(_httpClientFactory, _loggerFactory, _serverApplicationHost, _httpContextAccessor, _userConfig, query, ApiName.Annict, variables);
+            var response = await AuthenticatedRequest(query, ApiName.Annict, variables);
             return response != null;
         }
 
@@ -129,20 +118,22 @@ namespace jellyfin_ani_sync.Api.Annict {
 
             AnnictMediaList.AnnictUserMediaList result = new AnnictMediaList.AnnictUserMediaList();
 
-            var response = await GraphQlHelper.AuthenticatedRequest(_httpClientFactory, _loggerFactory, _serverApplicationHost, _httpContextAccessor, _userConfig, query, ApiName.Annict, variables);
+            var response = await AuthenticatedRequest(query, ApiName.Annict, variables);
             if (response != null) {
                 StreamReader streamReader = new StreamReader(await response.Content.ReadAsStreamAsync());
                 result = JsonSerializer.Deserialize<AnnictMediaList.AnnictUserMediaList>(await streamReader.ReadToEndAsync());
             }
+
             if (result != null) {
                 while (result.AnnictSearchData.Viewer.AnnictUserMediaListLibraryEntries.PageInfo.HasNextPage) {
                     variables["after"] = result.AnnictSearchData.Viewer.AnnictUserMediaListLibraryEntries.PageInfo.StartCursor;
-                    var paginatedResponse = await GraphQlHelper.AuthenticatedRequest(_httpClientFactory, _loggerFactory, _serverApplicationHost, _httpContextAccessor, _userConfig, query, ApiName.Annict, variables);
+                    var paginatedResponse = await AuthenticatedRequest(query, ApiName.Annict, variables);
                     var paginatedResult = new AnnictMediaList.AnnictUserMediaList();
                     if (paginatedResponse != null) {
                         StreamReader streamReader = new StreamReader(await paginatedResponse.Content.ReadAsStreamAsync());
                         paginatedResult = JsonSerializer.Deserialize<AnnictMediaList.AnnictUserMediaList>(await streamReader.ReadToEndAsync());
                     }
+
                     result.AnnictSearchData.Viewer.AnnictUserMediaListLibraryEntries.Nodes = result.AnnictSearchData.Viewer.AnnictUserMediaListLibraryEntries.Nodes.Concat(paginatedResult.AnnictSearchData.Viewer.AnnictUserMediaListLibraryEntries.Nodes).ToList();
                     result.AnnictSearchData.Viewer.AnnictUserMediaListLibraryEntries.PageInfo = paginatedResult.AnnictSearchData.Viewer.AnnictUserMediaListLibraryEntries.PageInfo;
                     if (!paginatedResult.AnnictSearchData.Viewer.AnnictUserMediaListLibraryEntries.PageInfo.HasNextPage) {
@@ -159,7 +150,7 @@ namespace jellyfin_ani_sync.Api.Annict {
 
             return null;
         }
-        
+
         /// <summary>
         /// Get a singular anime.
         /// </summary>
@@ -183,7 +174,7 @@ namespace jellyfin_ani_sync.Api.Annict {
                 { "id", id }
             };
 
-            var response = await GraphQlHelper.AuthenticatedRequest(_httpClientFactory, _loggerFactory, _serverApplicationHost, _httpContextAccessor, _userConfig, query, ApiName.Annict, variables);
+            var response = await AuthenticatedRequest(query, ApiName.Annict, variables);
             if (response != null) {
                 StreamReader streamReader = new StreamReader(await response.Content.ReadAsStreamAsync());
                 var result = JsonSerializer.Deserialize<AnnictGetMedia.AnnictGetMediaRoot>(await streamReader.ReadToEndAsync());
@@ -203,7 +194,7 @@ namespace jellyfin_ani_sync.Api.Annict {
           }
         }";
 
-            var response = await GraphQlHelper.AuthenticatedRequest(_httpClientFactory, _loggerFactory, _serverApplicationHost, _httpContextAccessor, _userConfig, query, ApiName.Annict, new Dictionary<string, object>());
+            var response = await AuthenticatedRequest(query, ApiName.Annict, new Dictionary<string, object>());
             if (response != null) {
                 StreamReader streamReader = new StreamReader(await response.Content.ReadAsStreamAsync());
                 var result = JsonSerializer.Deserialize<AnnictViewer.AnnictViewerRoot>(await streamReader.ReadToEndAsync());
