@@ -17,6 +17,7 @@ using jellyfin_ani_sync.Api.Simkl;
 using jellyfin_ani_sync.Configuration;
 using jellyfin_ani_sync.Helpers;
 using jellyfin_ani_sync.Models;
+using jellyfin_ani_sync.Models.Mal;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Library;
@@ -159,7 +160,7 @@ namespace jellyfin_ani_sync.Api {
                     AniListApiCalls aniListApiCalls = new AniListApiCalls(_httpClientFactory, _loggerFactory, _serverApplicationHost, _httpContextAccessor, Plugin.Instance.PluginConfiguration.UserConfig.FirstOrDefault(item => item.UserId == Guid.Parse(userId)));
 
                     AniListViewer.Viewer? user = await aniListApiCalls.GetCurrentUser();
-                    return new OkObjectResult(new MalApiCalls.User {
+                    return new OkObjectResult(new User {
                         Name = user?.Name
                     });
                 case ApiName.Kitsu:
@@ -172,7 +173,7 @@ namespace jellyfin_ani_sync.Api {
                     }
 
                     var apiCall = await kitsuApiCalls.GetUserInformation();
-                    return new OkObjectResult(new MalApiCalls.User {
+                    return new OkObjectResult(new User {
                         Name = apiCall.Name
                     });
                 case ApiName.Annict:
@@ -187,7 +188,7 @@ namespace jellyfin_ani_sync.Api {
                     }
 
                     var annictApiCall = await annictApiCalls.GetCurrentUser();
-                    return new OkObjectResult(new MalApiCalls.User {
+                    return new OkObjectResult(new User {
                         Name = annictApiCall.AnnictSearchData.Viewer.username
                     });
                 case ApiName.Shikimori:
@@ -200,7 +201,7 @@ namespace jellyfin_ani_sync.Api {
 
                     ShikimoriApiCalls.User? shikimoriUserApiCall = await shikimoriApiCalls.GetUserInformation();
                     if (shikimoriUserApiCall != null) {
-                        return new OkObjectResult(new MalApiCalls.User {
+                        return new OkObjectResult(new User {
                             Name = shikimoriUserApiCall.Name
                         });
                     } else {
@@ -216,7 +217,7 @@ namespace jellyfin_ani_sync.Api {
                     var simklApiCalls = new SimklApiCalls(_httpClientFactory, _loggerFactory, _serverApplicationHost, _httpContextAccessor, new Dictionary<string, string> { { "simkl-api-key", simklClientId } }, userConfig);
 
                     if (await simklApiCalls.GetLastActivity()) {
-                        return new OkObjectResult(new MalApiCalls.User {
+                        return new OkObjectResult(new User {
                             Name = null
                         });
                     } else {

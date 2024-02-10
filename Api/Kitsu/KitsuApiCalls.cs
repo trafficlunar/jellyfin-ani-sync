@@ -11,6 +11,7 @@ using jellyfin_ani_sync.Configuration;
 using jellyfin_ani_sync.Helpers;
 using jellyfin_ani_sync.Models;
 using jellyfin_ani_sync.Models.Kitsu;
+using jellyfin_ani_sync.Models.Mal;
 using MediaBrowser.Controller;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -63,7 +64,7 @@ namespace jellyfin_ani_sync.Api.Kitsu {
             return null;
         }
 
-        public async Task<MalApiCalls.User> GetUserInformation() {
+        public async Task<User> GetUserInformation() {
             UrlBuilder url = new UrlBuilder {
                 Base = $"{ApiUrl}/users",
                 Parameters = new List<KeyValuePair<string, string>> {
@@ -79,7 +80,7 @@ namespace jellyfin_ani_sync.Api.Kitsu {
                 var animeList = JsonSerializer.Deserialize<KitsuGetUser.KitsuUserRoot>(await streamReader.ReadToEndAsync());
 
                 _logger.LogInformation("(Kitsu) Retrieved user information");
-                return new MalApiCalls.User { Id = animeList.KitsuUserList[0].Id, Name = animeList.KitsuUserList[0].KitsuUser.Name };
+                return new User { Id = animeList.KitsuUserList[0].Id, Name = animeList.KitsuUserList[0].KitsuUser.Name };
             }
 
             return null;

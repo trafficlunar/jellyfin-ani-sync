@@ -2,9 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -13,32 +11,19 @@ using jellyfin_ani_sync.Configuration;
 using jellyfin_ani_sync.Helpers;
 using jellyfin_ani_sync.Models;
 using jellyfin_ani_sync.Models.Mal;
-using MediaBrowser.Common.Net;
 using MediaBrowser.Controller;
-using MediaBrowser.Controller.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
 namespace jellyfin_ani_sync.Api {
     public class MalApiCalls : AuthApiCall {
         private readonly ILogger<MalApiCalls> _logger;
-        private readonly string _refreshTokenUrl = "https://myanimelist.net/v1/oauth2/token";
-        private readonly string _apiBaseUrl = "https://api.myanimelist.net/";
-        private readonly int _apiVersion = 2;
 
-        private string ApiUrl => _apiBaseUrl + "v" + _apiVersion;
+        private string ApiUrl => $"https://api.myanimelist.net/v2";
 
         public MalApiCalls(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory, IServerApplicationHost serverApplicationHost, IHttpContextAccessor httpContextAccessor, UserConfig userConfig) :
             base(ApiName.Mal, httpClientFactory, serverApplicationHost, httpContextAccessor, loggerFactory, userConfig) {
             _logger = loggerFactory.CreateLogger<MalApiCalls>();
-        }
-
-        public class User {
-            [JsonPropertyName("id")] public int Id { get; set; }
-            [JsonPropertyName("name")] public string Name { get; set; }
-            [JsonPropertyName("location")] public string Location { get; set; }
-            [JsonPropertyName("joined_at")] public DateTime JoinedAt { get; set; }
-            [JsonPropertyName("picture")] public string Picture { get; set; }
         }
 
         /// <summary>
@@ -48,7 +33,7 @@ namespace jellyfin_ani_sync.Api {
             UrlBuilder url = new UrlBuilder {
                 Base = $"{ApiUrl}/users/@me"
             };
-            var apiCall = await AuthenticatedApiCall(ApiName.Mal, AuthApiCall.CallType.GET, url.Build());
+            var apiCall = await AuthenticatedApiCall(ApiName.Mal, CallType.GET, url.Build());
             if (apiCall != null) {
                 StreamReader streamReader = new StreamReader(await apiCall.Content.ReadAsStreamAsync());
                 string streamText = await streamReader.ReadToEndAsync();
@@ -64,8 +49,9 @@ namespace jellyfin_ani_sync.Api {
         /// </summary>
         /// <param name="query">Search by title.</param>
         /// <param name="fields">The fields you would like returned.</param>
+        /// <param name="updateNsfw">True to return NSFW anime.</param>
         /// <returns>List of anime.</returns>
-        public async Task<List<Anime>> SearchAnime(string? query, string[]? fields, bool updateNsfw = false) {
+        public async Task<List<Anime>> SearchAnime(string query, string[] fields, bool updateNsfw = false) {
             UrlBuilder url = new UrlBuilder {
                 Base = $"{ApiUrl}/anime"
             };
@@ -87,17 +73,17 @@ namespace jellyfin_ani_sync.Api {
             }
 
             string builtUrl = url.Build();
-            _logger.LogInformation($"Starting search for anime (GET {builtUrl})...");
-            var apiCall = await AuthenticatedApiCall(ApiName.Mal, AuthApiCall.CallType.GET, builtUrl);
+            _logger.LogInformation($"(MAL) Starting search for anime (GET {builtUrl})...");
+            var apiCall = await AuthenticatedApiCall(ApiName.Mal, CallType.GET, builtUrl);
             if (apiCall != null) {
                 StreamReader streamReader = new StreamReader(await apiCall.Content.ReadAsStreamAsync());
                 var animeList = JsonSerializer.Deserialize<SearchAnimeResponse>(await streamReader.ReadToEndAsync());
 
-                _logger.LogInformation("Search complete");
+                _logger.LogInformation("(MAL) Search complete");
                 return animeList.Data.Select(list => list.Anime).ToList();
-            } else {
-                return null;
             }
+
+            return null;
         }
 
         /// <summary>
@@ -114,15 +100,15 @@ namespace jellyfin_ani_sync.Api {
             }
 
             string builtUrl = url.Build();
-            _logger.LogInformation($"Retrieving an anime from MAL (GET {builtUrl})...");
+            _logger.LogInformation($"(MAL) Retrieving an anime from MAL (GET {builtUrl})...");
             try {
-                var apiCall = await AuthenticatedApiCall(ApiName.Mal, AuthApiCall.CallType.GET, builtUrl);
+                var apiCall = await AuthenticatedApiCall(ApiName.Mal, CallType.GET, builtUrl);
                 if (apiCall != null) {
                     StreamReader streamReader = new StreamReader(await apiCall.Content.ReadAsStreamAsync());
                     var options = new JsonSerializerOptions();
                     options.Converters.Add(new JsonStringEnumConverter());
                     var anime = JsonSerializer.Deserialize<Anime>(await streamReader.ReadToEndAsync(), options);
-                    _logger.LogInformation("Anime retrieval complete");
+                    _logger.LogInformation("(MAL) Anime retrieval complete");
                     return anime;
                 } else {
                     return null;
@@ -134,11 +120,11 @@ namespace jellyfin_ani_sync.Api {
         }
 
         public enum Sort {
-            List_score,
-            List_updated_at,
-            Anime_title,
-            Anime_start_date,
-            Anime_id
+            ListScore,
+            ListUpdatedAt,
+            AnimeTitle,
+            AnimeStartDate,
+            AnimeId
         }
 
         public async Task<List<UserAnimeListData>> GetUserAnimeList(Status? status = null, Sort? sort = null, int? idSearch = null) {
@@ -153,21 +139,22 @@ namespace jellyfin_ani_sync.Api {
             }
 
             if (sort != null) {
-                url.Parameters.Add(new KeyValuePair<string, string>("sort", sort.Value.ToString().ToLower()));
+                url.Parameters.Add(new KeyValuePair<string, string>("sort", StringFormatter.ConvertEnumToString('_', sort).ToLower()));
             }
 
             string builtUrl = url.Build();
             UserAnimeList userAnimeList = new UserAnimeList { Data = new List<UserAnimeListData>() };
-            while (builtUrl != null) {
-                _logger.LogInformation($"Getting user anime list (GET {builtUrl})...");
-                var apiCall = await AuthenticatedApiCall(ApiName.Mal, AuthApiCall.CallType.GET, builtUrl);
+            while (true) {
+                _logger.LogInformation($"(MAL) Getting user anime list (GET {builtUrl})...");
+                var apiCall = await AuthenticatedApiCall(ApiName.Mal, CallType.GET, builtUrl);
                 if (apiCall != null) {
                     StreamReader streamReader = new StreamReader(await apiCall.Content.ReadAsStreamAsync());
-                    var options = new JsonSerializerOptions();
-                    options.Converters.Add(new JsonStringEnumConverter());
+                    var options = new JsonSerializerOptions {
+                        Converters = { new JsonStringEnumConverter() }
+                    };
                     UserAnimeList userAnimeListPage = JsonSerializer.Deserialize<UserAnimeList>(await streamReader.ReadToEndAsync(), options);
 
-                    if (userAnimeListPage?.Data != null && userAnimeListPage.Data.Count > 0) {
+                    if (userAnimeListPage?.Data is { Count: > 0 }) {
                         if (idSearch != null) {
                             var foundAnime = userAnimeListPage.Data.FirstOrDefault(anime => anime.Anime.Id == idSearch);
                             if (foundAnime != null) {
@@ -179,20 +166,20 @@ namespace jellyfin_ani_sync.Api {
 
                         if (userAnimeListPage.Paging.Next != null) {
                             builtUrl = userAnimeListPage.Paging.Next;
-                            _logger.LogInformation($"Additional pages found; waiting 2 seconds before calling again...");
+                            _logger.LogInformation("(MAL) Additional pages found; waiting 2 seconds before calling again...");
                             Thread.Sleep(2000);
                         } else {
-                            builtUrl = null;
+                            break;
                         }
                     } else {
-                        builtUrl = null;
+                        break;
                     }
                 } else {
-                    return null;
+                    break;
                 }
             }
 
-            _logger.LogInformation("Got user anime list");
+            _logger.LogInformation("(MAL) Got user anime list");
             return userAnimeList.Data.ToList();
         }
 
@@ -232,20 +219,20 @@ namespace jellyfin_ani_sync.Api {
 
             UpdateAnimeStatusResponse updateResponse;
             try {
-                var apiCall = await AuthenticatedApiCall(ApiName.Mal, AuthApiCall.CallType.PUT, builtUrl, new FormUrlEncodedContent(body.ToArray()));
+                var apiCall = await AuthenticatedApiCall(ApiName.Mal, CallType.PUT, builtUrl, new FormUrlEncodedContent(body.ToArray()));
 
                 if (apiCall != null) {
                     StreamReader streamReader = new StreamReader(await apiCall.Content.ReadAsStreamAsync());
                     var options = new JsonSerializerOptions();
                     options.Converters.Add(new JsonStringEnumConverter());
-                    _logger.LogInformation($"Updating anime status (PUT {builtUrl})...");
+                    _logger.LogInformation($"(MAL) Updating anime status (PUT {builtUrl})...");
                     updateResponse = JsonSerializer.Deserialize<UpdateAnimeStatusResponse>(await streamReader.ReadToEndAsync(), options);
-                    _logger.LogInformation("Update complete");
+                    _logger.LogInformation("(MAL) Update complete");
                 } else {
                     updateResponse = null;
                 }
             } catch (Exception e) {
-                _logger.LogError(e.Message);
+                _logger.LogError($"(MAL) Error updating anime status: {e.Message}");
                 updateResponse = null;
             }
 

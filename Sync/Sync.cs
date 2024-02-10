@@ -21,6 +21,8 @@ using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using MalUser = jellyfin_ani_sync.Models.Mal.User;
+using JellyfinUser = Jellyfin.Data.Entities.User;
 
 namespace jellyfin_ani_sync;
 
@@ -83,7 +85,7 @@ public class Sync {
     /// <returns>Users' provider anime list.</returns>
     private async Task<List<Anime>> GetAnimeList(string userId) {
         ApiCallHelpers apiCallHelpers = new ApiCallHelpers();
-        MalApiCalls.User user = new MalApiCalls.User();
+        MalUser user = new MalUser();
         switch (_apiName) {
             case ApiName.Mal:
                 apiCallHelpers = new ApiCallHelpers(malApiCalls: new MalApiCalls(_httpClientFactory, _loggerFactory, _serverApplicationHost, _httpContextAccessor, Plugin.Instance.PluginConfiguration.UserConfig.FirstOrDefault(item => item.UserId == Guid.Parse(userId))));
@@ -193,7 +195,7 @@ public class Sync {
     /// <param name="itemToBeUpdated">Items to be saved.</param>
     /// <param name="completedDate">Played date.</param>
     /// <returns>User item data.</returns>
-    private UserItemData SetUserData(User user, BaseItem itemToBeUpdated, DateTime? completedDate) {
+    private UserItemData SetUserData(JellyfinUser user, BaseItem itemToBeUpdated, DateTime? completedDate) {
         var userItemData = _userDataManager.GetUserData(user, itemToBeUpdated);
         userItemData.Played = true;
         if (completedDate != null) {

@@ -87,8 +87,8 @@ namespace jellyfin_ani_sync.Helpers {
             return anime;
         }
 
-        public static MalApiCalls.User ConvertUser(int id, string name) {
-            return new MalApiCalls.User {
+        public static User ConvertUser(int id, string name) {
+            return new User {
                 Id = id,
                 Name = name
             };

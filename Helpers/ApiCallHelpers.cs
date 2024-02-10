@@ -528,7 +528,7 @@ namespace jellyfin_ani_sync.Helpers {
             return null;
         }
 
-        public async Task<MalApiCalls.User> GetUser() {
+        public async Task<User> GetUser() {
             if (_malApiCalls != null) {
                 return await _malApiCalls.GetUserInformation();
             }
@@ -541,7 +541,7 @@ namespace jellyfin_ani_sync.Helpers {
             if (_kitsuApiCalls != null) {
                 var user = await _kitsuApiCalls.GetUserId();
                 if (user != null)
-                    return new MalApiCalls.User {
+                    return new User {
                         Id = user.Value
                     };
             }
@@ -549,7 +549,7 @@ namespace jellyfin_ani_sync.Helpers {
             if (_annictApiCalls != null) {
                 AnnictViewer.AnnictViewerRoot user = await _annictApiCalls.GetCurrentUser();
                 if (user != null)
-                    return new MalApiCalls.User {
+                    return new User {
                         Name = user.AnnictSearchData.Viewer.username
                     };
             }
@@ -557,7 +557,7 @@ namespace jellyfin_ani_sync.Helpers {
             if (_shikimoriApiCalls != null) {
                 ShikimoriApiCalls.User user = await _shikimoriApiCalls.GetUserInformation();
                 if (user != null) {
-                    return new MalApiCalls.User {
+                    return new User {
                         Id = user.Id,
                         Name = user.Name
                     };

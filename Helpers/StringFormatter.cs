@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using System.Text;
 
 namespace jellyfin_ani_sync.Helpers {
@@ -23,5 +25,8 @@ namespace jellyfin_ani_sync.Helpers {
 
             return stringBuilder.ToString();
         }
+        
+        public static string ConvertEnumToString(char separator, Enum @enum) =>
+            string.Concat(@enum.ToString().Select(c => Char.IsUpper(c) ? $"{separator}{c}" : c.ToString())).TrimStart(separator);
     }
 }
