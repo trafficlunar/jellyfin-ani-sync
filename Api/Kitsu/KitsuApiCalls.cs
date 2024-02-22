@@ -52,7 +52,7 @@ namespace jellyfin_ani_sync.Api.Kitsu {
         }
 
         public async Task<int?> GetUserId() {
-            var userIdKeyPair = _userConfig.KeyPairs.FirstOrDefault(item => item.Key == "KitsuUserId")?.Value;
+            var userIdKeyPair = _userConfig.KeyPairs?.FirstOrDefault(item => item.Key == "KitsuUserId")?.Value;
             int? userId = null;
             if (userIdKeyPair != null) {
                 return int.Parse(userIdKeyPair);
